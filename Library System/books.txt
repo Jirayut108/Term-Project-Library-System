@@ -1,0 +1,4 @@
+1|Python Book|Alex Lee|20|A
+2|Happy in for Life|Josh Hope|15|D
+3|C++ Book|Dell lee|20|A
+4|Computer programing|jirayut|15|A

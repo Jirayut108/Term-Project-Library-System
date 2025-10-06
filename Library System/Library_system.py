@@ -2,13 +2,13 @@ import os
 from tabulate import tabulate
 from datetime import datetime, timedelta
 
-
+# Base folder for data files (same folder as script)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
 
 def get_path(filename):
     return os.path.join(BASE_DIR, filename)
 
-
+# ------------ Utility ------------
 def read_file(filename, min_fields=None):
     """อ่านไฟล์แล้วคืนรายการเป็น list of list
     ถ้ามี min_fields จะเติมช่องว่างให้ครบความยาวนั้นเพื่อหลีกเลี่ยง IndexError
@@ -87,7 +87,7 @@ def ensure_min_len(lst, n):
     while len(lst) < n:
         lst.append("")
 
-
+# Helpers to get names/titles
 def get_book_title(book_id):
     books = read_file("books.txt", min_fields=5)
     return next((b[1] for b in books if b and b[0].strip() == book_id and b[-1] == "A"), "ไม่ทราบชื่อหนังสือ")
@@ -97,7 +97,7 @@ def get_member_name(member_id):
     members = read_file("members.txt", min_fields=4)
     return next((m[1] for m in members if m and m[0].strip() == member_id and m[-1] == "A"), "ไม่ทราบชื่อ")
 
-
+# เพิ่มฟังก์ชันนับจำนวนหนังสือที่ถูกยืมอยู่
 def get_borrowed_count(book_id):
     """นับจำนวนเล่มของหนังสือที่กำลังถูกยืมอยู่"""
     borrow_items = read_file("borrow_items.txt", min_fields=6)
@@ -110,7 +110,7 @@ def get_borrowed_count(book_id):
             continue
     return count
 
-
+# เพิ่มฟังก์ชันเช็คสถานะหนังสือ
 def get_book_borrow_status(book_id):
     """เช็คว่าหนังสือกำลังถูกยืมอยู่หรือไม่"""
     borrow_items = read_file("borrow_items.txt", min_fields=6)
@@ -122,7 +122,7 @@ def get_book_borrow_status(book_id):
             continue
     return "ว่าง"
 
-
+# ------------ CRUD Template ------------
 def add_record(filename, fields):
     records = read_file(filename)
     slot = find_free_slot(records)
@@ -145,8 +145,8 @@ def view_records(filename, headers, min_fields=0):
     print("="*40)
     for r in records:
         if r and r[-1] == "A":
-            
-            display_record = r[:-1]  
+            # ไม่แสดงคอลัมน์ Status สุดท้าย
+            display_record = r[:-1]  # เอา status ออก
             print(" | ".join(display_record))
     print("="*40)
 
@@ -172,7 +172,7 @@ def delete_record(filename, record_id):
             return
     print("✘ ไม่พบข้อมูล")
 
-
+# ------------ Specific Functions ------------
 def add_book():
     title = input("ชื่อหนังสือ: ").strip()
     author = input("ผู้แต่ง: ").strip()
@@ -212,7 +212,7 @@ def add_member():
 def view_members():
     view_records("members.txt", ["MemberID", "Name", "Phone"], min_fields=4)
 
-
+# ยืมหลายเล่ม (แก้ไขให้รองรับหนังสือหลายเล่มและจำกัดการยืมไม่เกิน 3 เล่ม)
 def check_book_availability(book_id):
     """เช็คว่าหนังสือมีเล่มว่างหรือไม่"""
     books = read_file("books.txt", min_fields=5)
@@ -270,7 +270,7 @@ def show_available_books():
         print("ไม่มีหนังสือที่พร้อมให้ยืม")
 
 def add_borrow():
-   
+    # แสดงรายการสมาชิกก่อน
     show_members_list()
     
     member_id = input("\nรหัสสมาชิก: ").strip()
@@ -278,7 +278,7 @@ def add_borrow():
         print("✘ ไม่พบสมาชิกในระบบ")
         return
 
-    
+    # แสดงรายการหนังสือที่มีให้ยืม
     show_available_books()
     
     print("\nกรอก BookID ที่ต้องการยืม (พิมพ์ 'done' เมื่อเสร็จ หรือ 'cancel' เพื่อยกเลิก):")
@@ -302,7 +302,7 @@ def add_borrow():
             print("✘ หนังสือเล่มนี้ไม่มีเล่มว่าง")
             continue
         
-        
+        # แสดงข้อมูลหนังสือและจำนวนที่ว่าง
         books = read_file("books.txt", min_fields=5)
         book = next((b for b in books if b and b[0].strip() == book_id and b[-1] == "A"), None)
         if book:
@@ -317,7 +317,7 @@ def add_borrow():
         print("✘ ไม่มีหนังสือที่เลือก ยกเลิกรายการ")
         return
 
-    
+    # ตอนนี้เพิ่งถามวันที่
     borrow_date = input("วันที่ยืม (dd/mm/yyyy) (หรือพิมพ์ 'cancel' เพื่อยกเลิก): ").strip()
     if borrow_date.lower() == "cancel":
         print("❌ ยกเลิกรายการยืมเรียบร้อย (ไม่มีการบันทึกข้อมูล)")
@@ -331,7 +331,7 @@ def add_borrow():
     return_date = return_dt.strftime("%d/%m/%Y")
     print(f"📅 วันที่ต้องคืน: {return_date}")
 
-    
+    # บันทึกการยืมจริง
     borrow_id = add_record("borrows.txt", [member_id, borrow_date, return_date, "0", "กำลังยืม"])
     for book_id in selected_books:
         add_record("borrow_items.txt", [borrow_id, book_id, "กำลังยืม", "0"])
@@ -347,14 +347,14 @@ def show_active_borrows():
     for br in borrows:
         if not br or br[-1] != "A":
             continue
-        
+        # เช็คว่ามีหนังสือที่ยังไม่คืนหรือไม่
         has_unreturned = any(bi and len(bi) >= 6 and bi[1] == br[0] and bi[3].strip() == "กำลังยืม" and bi[-1] == "A" for bi in borrow_items)
         if has_unreturned:
             member_name = get_member_name(br[1])
             borrow_date = br[2]
             return_date = br[3]
             
-            
+            # หาชื่อหนังสือที่ยังยืมอยู่
             book_titles = []
             for bi in borrow_items:
                 if bi and len(bi) >= 6 and bi[1] == br[0] and bi[3].strip() == "กำลังยืม" and bi[-1] == "A":
@@ -373,14 +373,14 @@ def show_active_borrows():
 
 def delete_borrow_record(borrow_id):
     """ลบรายการยืมและ borrow_items ที่เกี่ยวข้อง"""
-    
+    # ลบ borrow_items ที่เกี่ยวข้องก่อน
     borrow_items = read_file("borrow_items.txt", min_fields=6)
     for i, bi in enumerate(borrow_items):
         if bi and bi[1] == borrow_id and bi[-1] == "A":
-            borrow_items[i][-1] = "D" 
+            borrow_items[i][-1] = "D"  # ทำเครื่องหมายลบ
     write_file("borrow_items.txt", borrow_items)
     
-    
+    # ลบรายการยืมหลัก
     delete_record("borrows.txt", borrow_id)
     print("✔ ลบรายการยืมและคืนหนังสือทั้งหมดในรายการนี้เรียบร้อย")
 
@@ -404,7 +404,7 @@ def show_borrowed_books(borrow_id):
         return False
 
 def return_book():
-    
+    # แสดงรายการยืมที่ยังไม่คืนครบก่อน
     if not show_active_borrows():
         return
     
@@ -417,7 +417,7 @@ def return_book():
         print("✘ ไม่พบรหัสการยืม")
         return
 
-    
+    # แสดงรายการหนังสือที่กำลังยืมอยู่
     if not show_borrowed_books(borrow_id):
         return
 
@@ -429,7 +429,7 @@ def return_book():
             break
         found = False
         for i, bi in enumerate(borrow_items):
-            
+            # bi: [item_id, borrow_id, book_id, status, fine, "A"]
             if bi and len(bi) >= 6 and bi[1] == borrow_id and bi[2] == book_id and bi[3].strip() == "กำลังยืม":
                 items_to_return.append(i)
                 found = True
@@ -447,7 +447,7 @@ def return_book():
         print("✘ รูปแบบวันที่ไม่ถูกต้อง")
         return
 
-    
+    # คืนหนังสือ + คำนวณค่าปรับ โดยใช้วันที่จาก borrow (br[2]=borrow_date, br[3]=return_date)
     for i in items_to_return:
         bi = borrow_items[i]
         ensure_min_len(bi, 6)
@@ -457,7 +457,7 @@ def return_book():
 
     write_file("borrow_items.txt", borrow_items)
 
-    
+    # เช็กว่าคืนครบทุกเล่มแล้วหรือยัง
     still_borrowed = any(bi and len(bi) >= 6 and bi[1] == borrow_id and bi[3].strip() == "กำลังยืม" and bi[-1] == "A" for bi in borrow_items)
     for i, br in enumerate(borrows):
         if br and br[0] == borrow_id:
@@ -473,7 +473,7 @@ def view_borrows():
     borrows = read_file("borrows.txt", min_fields=7)
     borrow_items = read_file("borrow_items.txt", min_fields=6)
     members = read_file("members.txt", min_fields=4)
-    books = read_file("books.txt", min_fields=5)  
+    books = read_file("books.txt", min_fields=5)  # แก้ไขจาก 4 เป็น 5
 
     table = []
     for br in borrows:
@@ -483,13 +483,13 @@ def view_borrows():
         borrow_date = br[2]
         return_date = br[3]
         status = br[5] if len(br) > 5 else ""
-        
+        # หา titles ที่ยังสถานะกำลังยืมของ borrow นี้
         titles = []
         for bi in borrow_items:
             if bi and len(bi) >= 6 and bi[1] == br[0] and bi[3].strip() == "กำลังยืม" and bi[-1] == "A":
                 titles.append(get_book_title(bi[2]))
         titles_str = ", ".join(titles) if titles else "-"
-        
+        # คำนวนค่าปรับรวมของรายการยืมนี้ (จาก borrow_items)
         fine_sum = 0.0
         for bi in borrow_items:
             if bi and bi[-1] == "A" and bi[1] == br[0]:
@@ -504,9 +504,9 @@ def view_borrows():
     else:
         print("ไม่มีรายการการยืม")
 
-
+# ------------ Enhanced Report ------------
 def generate_report():
-    books = read_file("books.txt", min_fields=5)  
+    books = read_file("books.txt", min_fields=5)  # แก้ไขจาก 4 เป็น 5
     members = read_file("members.txt", min_fields=4)
     borrows = read_file("borrows.txt", min_fields=7)
     borrow_items = read_file("borrow_items.txt", min_fields=6)
@@ -537,14 +537,14 @@ def generate_report():
         try:
             fine = float(bi[4]) if str(bi[4]).replace('.', '', 1).isdigit() else 0
             total_fine += fine
-            
+            # ถ้าคืนแล้วแต่ยังมีค่าปรับ = ยังไม่ได้รับ
             if bi[3].strip() == "คืนแล้ว" and fine > 0:
                 unpaid_fine += fine
         except Exception:
             continue
 
-    
-    books_currently_borrowed = 0  
+    # นับหนังสือที่กำลังถูกยืมอยู่
+    books_currently_borrowed = 0  # หนังสือที่กำลังถูกยืมตอนนี้
     
     for bi in borrow_items:
         if bi and bi[-1] == "A" and bi[3].strip() == "กำลังยืม":
@@ -552,7 +552,7 @@ def generate_report():
 
     print(f"📚 จำนวนหนังสือทั้งหมด: {total_books} เรื่อง")
     
-    
+    # คำนวณจำนวนเล่มรวมทั้งหมด
     total_copies_all = 0
     for b in books:
         if b and b[-1] == "A":
@@ -569,7 +569,7 @@ def generate_report():
     print(f"⚠️  ค่าปรับที่ยังไม่ได้รับ: {unpaid_fine:.2f} บาท")
     print("="*60)
 
-    
+    # หนังสือกำลังถูกยืม
     print("\n📖 หนังสือที่กำลังถูกยืม")
     borrowed_books = []
     for bi in borrow_items:
@@ -595,7 +595,7 @@ def generate_report():
     else:
         print("ไม่มีหนังสือที่กำลังถูกยืมอยู่")
 
-    
+    # รายละเอียดค่าปรับ
     print("\n💰 รายละเอียดค่าปรับ")
     fine_records = []
     for bi in borrow_items:
@@ -619,7 +619,7 @@ def generate_report():
     else:
         print("ไม่มีค่าปรับ")
 
-    
+    # หนังสือยอดนิยม
     print("\n📈 สถิติการยืม")
     book_borrow_count = {}
     for bi in borrow_items:
@@ -634,10 +634,10 @@ def generate_report():
             print(f"{i}. {book_title} - ถูกยืม {count} ครั้ง")
     print("="*60)
 
-
+# ------------ Main Menu ------------
 def main():
     while True:
-        
+        # เรียงเมนูใหม่: Book -> Member -> Borrow -> Report -> Exit
         data = ["1. Add Book","2. View Books","3. Update Book","4. Delete Book",
                 "5. Add Member","6. View Members","7. Update Member","8. Delete Member",
                 "9. Add Borrow","10. View Borrows","11. Return Book","12. Update Borrow",
@@ -648,11 +648,11 @@ def main():
 
         choice = input("เลือกเมนู: ").strip()
 
-        
+        # Book Management (1-4)
         if choice == "1": add_book()
         elif choice == "2": view_books()
         elif choice == "3":
-            
+            # แสดงรายการหนังสือก่อนแก้ไข
             view_books()
             bid = input("\nใส่ BookID ที่ต้องการแก้ไข: ").strip()
             title = input("ชื่อหนังสือใหม่: ").strip()
@@ -668,31 +668,31 @@ def main():
                     print("✘ กรุณาใส่ตัวเลข")
             update_record("books.txt", bid, [title, author, total_copies])
         elif choice == "4":
-            
+            # แสดงรายการหนังสือก่อนลบ
             view_books()
             bid = input("\nใส่ BookID ที่ต้องการลบ: ").strip()
             delete_record("books.txt", bid)
-        
+        # Member Management (5-8)
         elif choice == "5": add_member()
         elif choice == "6": view_members()
         elif choice == "7":
-            
+            # แสดงรายการสมาชิกก่อนแก้ไข
             view_members()
             mid = input("\nใส่ MemberID ที่ต้องการแก้ไข: ").strip()
             name = input("ชื่อสมาชิกใหม่: ").strip()
             phone = input("เบอร์ใหม่: ").strip()
             update_record("members.txt", mid, [name, phone])
         elif choice == "8":
-            
+            # แสดงรายการสมาชิกก่อนลบ
             view_members()
             mid = input("\nใส่ MemberID ที่ต้องการลบ: ").strip()
             delete_record("members.txt", mid)
-        
+        # Borrow Management (9-13)
         elif choice == "9": add_borrow()
         elif choice == "10": view_borrows()
         elif choice == "11": return_book()
         elif choice == "12":
-            
+            # แสดงรายการการยืมทั้งหมดก่อนแก้ไข
             view_borrows()
             borrow_id = input("\nใส่ BorrowID ที่ต้องการแก้ไข: ").strip()
             show_members_list()
@@ -703,11 +703,11 @@ def main():
             status = input("สถานะใหม่: ").strip()
             update_record("borrows.txt", borrow_id, [member_id, borrow_date, return_date, fine, status])
         elif choice == "13":
-            
+            # แสดงรายการการยืมทั้งหมดก่อนลบ
             view_borrows()
             borrow_id = input("\nใส่ BorrowID ที่ต้องการลบ: ").strip()
             delete_borrow_record(borrow_id)
-        
+        # Report & Exit
         elif choice == "14": generate_report()
         elif choice == "0":
             print("ออกจากระบบ")
